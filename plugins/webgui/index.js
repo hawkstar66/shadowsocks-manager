@@ -3,6 +3,7 @@ const logger = log4js.getLogger('webgui');
 const expressLogger = log4js.getLogger('express');
 
 const config = appRequire('services/config').all();
+const os = require('os');
 const path = require('path');
 const express = require('express');
 // const WebSocketServer = require('ws').Server;
@@ -27,7 +28,7 @@ const cors = require('cors');
 app.set('trust proxy', 'loopback');
 app.use(log4js.connectLogger(expressLogger, {
   level: 'auto',
-  format: '[:req[x-real-ip]] :method :status :response-timems :url',
+  format: '[:req[host]] [:req[x-real-ip]] :method :status :response-timems :url',
 }));
 
 if(config.plugins.webgui.cors) {
@@ -54,6 +55,7 @@ app.set('views', path.resolve('./plugins/webgui/views'));
 
 app.use('/libs', express.static(path.resolve('./plugins/webgui/libs')));
 app.use('/public', express.static(path.resolve('./plugins/webgui/public')));
+app.use('/public/views/skin', express.static(path.resolve(os.homedir(), './.ssmgr/skin')));
 
 app.use('/api/*', (req, res, next) => {
   res.setHeader('Surrogate-Control', 'no-store');
@@ -87,9 +89,7 @@ app.listen(port, host, () => {
 //   }
 // });
 
-app.use((err, req, res, next) => {
-  return res.render('error');
-});
+app.use((err, req, res, next) => res.render('error'));
 
 exports.app = app;
 // exports.wss = wss;

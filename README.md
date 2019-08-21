@@ -11,22 +11,23 @@
 A shadowsocks manager tool for multi user and traffic control.  
 Base on Node.js and SQLite.
 
-For more details, you can see [the wiki page](https://github.com/shadowsocks/shadowsocks-manager/wiki).
+For more details, you can see [docs](https://shadowsocks.github.io/shadowsocks-manager/).
 
 If you want to use the old version, please switch to [this branch](https://github.com/shadowsocks/shadowsocks-manager/tree/version1).
 
 ## WebGUI Demo:
 
-[https://shadowghost.app](https://shadowghost.app)
+[https://shadowghost.app](https://2young.2simple.dev)
 
 ## FreeAccount Demo:
 
-[https://free.gyteng.com](https://free.gyteng.com)
+[https://free.gyteng.com](https://free2.gyteng.com)
 
 
 ## Dependencies
 
-Node.js 8.*
+* Node.js 10.*
+* Redis
 
 ## Install
 
@@ -140,7 +141,6 @@ The listening address in `--manager-address` of step 1 and in `shadowsocks -> ad
 
 [telegram](https://github.com/shadowsocks/shadowsocks-manager/blob/master/plugins/telegram/README.md)  
 [freeAccount](https://github.com/shadowsocks/shadowsocks-manager/blob/master/plugins/freeAccount/README.md)  
-[freeAccountMiner](https://github.com/shadowsocks/shadowsocks-manager/blob/master/plugins/freeAccountMiner/README.md)  
 [webgui](https://github.com/shadowsocks/shadowsocks-manager/blob/master/plugins/webgui/README.md)  
 
 ### Parameter
@@ -170,7 +170,7 @@ First, ssmgr will read the config file in `--config`, and other parameters(`-det
 
 If your want to help to translate it to other languages, please edit files [here](https://github.com/shadowsocks/shadowsocks-manager/tree/dev/plugins/webgui/public/translate) and give me a pull request.
 
-### Telegram
+### Telegram Group
 Join the group if you have some problem: [https://t.me/ssmgr](https://t.me/ssmgr)
 
 ### VPS recommendation
@@ -179,13 +179,11 @@ Join the group if you have some problem: [https://t.me/ssmgr](https://t.me/ssmgr
 
 * [DigitalOcean](https://m.do.co/c/d43891b79a52)
 
-* [Vultr](http://www.vultr.com/?ref=6926595)
+* [Vultr](https://www.vultr.com/?ref=6926595)
 
 * [AlibabaCloud](https://account-intl.aliyun.com/register/intl_register.htm?biz_params=%7B%22intl%22%3A%22%7B%5C%22referralCode%5C%22%3A%5C%22koa26v%5C%22%7D%22%7D)
 
 * [BandwagonHost](https://bandwagonhost.com/aff.php?aff=19999)
-
-* [dediserve](https://manage.dediserve.com/?affid=841)
 
 ### Donate
 If you find this project helpful, please consider making a donation:  
@@ -195,3 +193,6 @@ If you find this project helpful, please consider making a donation:
 
 * WeChat Pay  
 <img src="https://github.com/gyteng/gyteng.github.com/raw/master/media/pic/wechat.png" width="160">
+
+* Paypal  
+[Donate link](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=8UQZLYGCTSLGQ&source=url)

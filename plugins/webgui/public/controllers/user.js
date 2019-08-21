@@ -1,8 +1,8 @@
 const app = angular.module('app');
 
 app
-.controller('UserController', ['$scope', '$mdMedia', '$mdSidenav', '$state', '$http', '$interval', '$localStorage', 'userApi', 'configManager',
-  ($scope, $mdMedia, $mdSidenav, $state, $http, $interval, $localStorage, userApi, configManager) => {
+.controller('UserController', ['$scope', '$mdMedia', '$mdSidenav', '$state', '$http', '$interval', '$localStorage', 'userApi', 'configManager', '$window',
+  ($scope, $mdMedia, $mdSidenav, $state, $http, $interval, $localStorage, userApi, configManager, $window) => {
     const config = configManager.getConfig();
     if(config.status === 'admin') {
       return $state.go('admin.index');
@@ -62,6 +62,9 @@ app
           $localStorage.home = {};
           $localStorage.user = {};
           configManager.deleteConfig();
+          if(config.crisp) {
+            $crisp.push(['do', 'session:reset', [false]]);
+          }
           $state.go('home.index');
         });
       },
@@ -129,11 +132,45 @@ app
         };
       });
     };
+    document.addEventListener('crispReady', function (e) {
+      $crisp.push(['set', 'session:data', [[['user-type', 'ssmgr-user']]]]);
+      $crisp.push(['set', 'session:data', [[['user-agent', navigator.userAgent]]]]);
+      if(!$scope.crispToken) {
+        $scope.crispToken = $crisp.get('session:identifier');
+        $http.post('/api/user/crisp', { token: $scope.crispToken });
+      }
+    }, false);
+    const startCrisp = () => {
+      $crisp.push(['do', 'chat:hide']);
+      $crisp.push(['on', 'chat:closed', () => {
+        $crisp.push(['do', 'chat:hide']);
+      }]);
+      (function() {
+        d = document;
+        s = d.createElement('script');
+        s.src = 'https://client.crisp.chat/l.js';
+        s.async = 1;
+        d.getElementsByTagName('head')[0].appendChild(s);
+      })();
+    };
+    if(config.crisp) {
+      $http.get('/api/user/crisp').then(success => {
+        $scope.crispToken = success.data.token;
+        $crisp.push(['set', 'user:email', config.email]);
+        if(!$scope.crispToken) {
+          startCrisp();
+        } else {
+          window.CRISP_TOKEN_ID = $scope.crispToken;
+          startCrisp();
+        }
+      });
+    }
   }
 ])
 .controller('UserIndexController', ['$scope', '$state', 'userApi', 'markdownDialog', '$sessionStorage', 'autopopDialog',
   ($scope, $state, userApi, markdownDialog, $sessionStorage, autopopDialog) => {
     $scope.setTitle('首页');
+    $scope.notices = [];
     userApi.getNotice().then(success => {
       $scope.notices = success;
       if(!$sessionStorage.showNotice) {
@@ -144,6 +181,9 @@ app
         }
       }
     });
+    userApi.getUsage().then(success => {
+      $scope.usage = success;
+    });
     $scope.toMyAccount = () => {
       $state.go('user.account');
     };
@@ -153,13 +193,20 @@ app
     $scope.toTelegram = () => {
       $state.go('user.telegram');
     };
+    $scope.toNotice = () => {
+      $state.go('user.notice');
+    };
     $scope.toRef = () => {
       $state.go('user.ref');
     };
+    $scope.toCrisp = () => {
+      $crisp.push(['do', 'chat:open']);
+      $crisp.push(['do', 'chat:show']);
+    };
   }
 ])
-.controller('UserAccountController', ['$scope', '$http', '$mdMedia', 'userApi', 'alertDialog', 'payDialog', 'qrcodeDialog', '$interval', '$localStorage', 'changePasswordDialog', 'payByGiftCardDialog', 'subscribeDialog', '$q', '$state',
-  ($scope, $http, $mdMedia, userApi, alertDialog, payDialog, qrcodeDialog, $interval, $localStorage, changePasswordDialog, payByGiftCardDialog, subscribeDialog, $q, $state) => {
+.controller('UserAccountController', ['$scope', '$http', '$mdMedia', 'userApi', 'alertDialog', 'payDialog', 'qrcodeDialog', '$interval', '$localStorage', 'changePasswordDialog', 'payByGiftCardDialog', 'subscribeDialog', '$q', '$state', 'wireGuardConfigDialog',
+  ($scope, $http, $mdMedia, userApi, alertDialog, payDialog, qrcodeDialog, $interval, $localStorage, changePasswordDialog, payByGiftCardDialog, subscribeDialog, $q, $state, wireGuardConfigDialog) => {
     $scope.setTitle('账号');
     $scope.setFabButton($scope.config.multiAccount ? () => {
       $scope.createOrder();
@@ -230,8 +277,24 @@ app
         return String.fromCharCode('0x' + p1);
       }));
     };
-    $scope.createQrCode = (method, password, host, port, serverName) => {
-      return 'ss://' + base64Encode(method + ':' + password + '@' + host + ':' + port);
+    $scope.createQrCode = (server, account) => {
+      if(!server) { return ''; }
+      if(server.type === 'WireGuard') {
+        const a = account.port % 254;
+        const b = (account.port - a) / 254;
+        return [
+          '[Interface]',
+          `Address = ${ server.net.split('.')[0] }.${ server.net.split('.')[1] }.${ b }.${ a + 1 }/32`,
+          `PrivateKey = ${ account.privateKey }`,
+          'DNS = 8.8.8.8',
+          '[Peer]',
+          `PublicKey = ${ server.key }`,
+          `Endpoint = ${ server.host }:${ server.wgPort }`,
+          `AllowedIPs = 0.0.0.0/0`,
+        ].join('\n');
+      } else {
+        return 'ss://' + base64Encode(server.method + ':' + account.password + '@' + server.host + ':' + (account.port + server.shift));
+      }
     };
 
     $scope.getServerPortData = (account, serverId) => {
@@ -318,9 +381,9 @@ app
         return false;
       }
     };
-    $scope.showQrcodeDialog = (method, password, host, port, serverName) => {
-      const ssAddress = $scope.createQrCode(method, password, host, port, serverName);
-      qrcodeDialog.show(serverName, ssAddress);
+    $scope.showQrcodeDialog = (server, account) => {
+      const ssAddress = $scope.createQrCode(server, account);
+      qrcodeDialog.show(server.name, ssAddress);
     };
     $scope.cycleStyle = account => {
       let percent = 0;
@@ -345,6 +408,15 @@ app
       return {
         filter: 'blur(4px)'
       };
+    };
+    $scope.clipboardSuccess = event => {
+      $scope.toast('二维码链接已复制到剪贴板');
+    };
+    $scope.isWG = server => {
+      return (server && server.type === 'WireGuard');
+    };
+    $scope.showWireGuard = (server, account) => {
+      wireGuardConfigDialog.show(server, account);
     };
   }
 ])
@@ -453,7 +525,26 @@ app
         }
       });
     };
+    $scope.addMacAccount = () => {
+      addMacAccountDialog.show().then(() => {
+        getMacAccount();
+      }).catch(err => {
+        getMacAccount();
+      });
+    };
     getMacAccount();
+  }
+])
+.controller('UserNoticeController', ['$scope', 'userApi', 'markdownDialog',
+  ($scope, userApi, markdownDialog) => {
+    $scope.setTitle('公告');
+    $scope.setMenuButton('arrow_back', 'user.index');
+    userApi.getNotice().then(success => {
+      $scope.notices = success;
+    });
+    $scope.showNotice = notice => {
+      markdownDialog.show(notice.title, notice.content);
+    };
   }
 ])
 ;
